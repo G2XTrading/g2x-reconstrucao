@@ -954,4 +954,5 @@ function draw(rows){let b=el('progressChart');if(rows.length<2){b.innerHTML='<di
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');el(b.dataset.tab).classList.add('active');if(b.dataset.tab==='progresso')progress();if(b.dataset.tab==='treino')renderWorkoutPlan();if(b.dataset.tab==='usuarios')loadUser()});
 el('dayPicker').onchange=load;el('planSelector').onchange=renderDiet;bind();renderHealth();renderUserSelector();loadUser();load();
 </script>
+<script type="module" src="js/supabase.js"></script>
 </body></html>
