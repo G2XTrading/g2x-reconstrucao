@@ -1,4 +1,8 @@
 import { getConsumedFoodsByDate } from "./daily-foods.js";
+import {
+  updateConsumedFood,
+  deleteConsumedFoodEntry
+} from "./daily-foods-actions.js";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -54,7 +58,14 @@ function createDailyFoodsPanel() {
 
       .daily-food-row {
         display: grid;
-        grid-template-columns: minmax(160px,1fr) 90px 80px 90px 80px 80px;
+        grid-template-columns:
+          minmax(160px,1fr)
+          80px
+          75px
+          75px
+          75px
+          75px
+          auto;
         gap: 8px;
         align-items: center;
         padding: 10px 12px;
@@ -72,6 +83,25 @@ function createDailyFoodsPanel() {
         font-size: .72rem;
       }
 
+      .daily-food-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .daily-food-actions button {
+        padding: 6px 9px;
+        border-radius: 8px;
+        border: 1px solid #394653;
+        background: #18222d;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .daily-food-actions .delete {
+        border-color: rgba(210,70,70,.5);
+        background: rgba(120,30,30,.4);
+      }
+
       .daily-food-total {
         margin-top: 14px;
         padding: 12px;
@@ -86,12 +116,16 @@ function createDailyFoodsPanel() {
         font-size: .78rem;
       }
 
-      @media (max-width: 760px) {
+      @media (max-width: 900px) {
         .daily-food-row {
           grid-template-columns: 1fr 1fr;
         }
 
         .daily-food-row > div:first-child {
+          grid-column: 1 / -1;
+        }
+
+        .daily-food-actions {
           grid-column: 1 / -1;
         }
       }
@@ -129,14 +163,56 @@ function groupByMeal(entries) {
   return entries.reduce((groups, entry) => {
     const key = entry.mealSlot || "Sem horário";
 
-    if (!groups[key]) {
-      groups[key] = [];
-    }
+    if (!groups[key]) groups[key] = [];
 
     groups[key].push(entry);
-
     return groups;
   }, {});
+}
+
+async function handleEdit(entry) {
+  const newTime = prompt(
+    "Horário da refeição:",
+    entry.mealSlot
+  );
+
+  if (newTime === null) return;
+
+  const newQuantity = prompt(
+    `Quantidade de ${entry.foodName} em gramas:`,
+    entry.quantityG
+  );
+
+  if (newQuantity === null) return;
+
+  try {
+    await updateConsumedFood({
+      entryId: entry.id,
+      mealSlot: newTime,
+      quantityG: newQuantity
+    });
+
+    window.location.reload();
+
+  } catch (error) {
+    alert(`Erro ao editar: ${error.message}`);
+  }
+}
+
+async function handleDelete(entry) {
+  const confirmDelete = confirm(
+    `Excluir ${entry.foodName} (${entry.quantityG} g)?`
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    await deleteConsumedFoodEntry(entry.id);
+    window.location.reload();
+
+  } catch (error) {
+    alert(`Erro ao excluir: ${error.message}`);
+  }
 }
 
 function renderDailyFoods(entries) {
@@ -216,15 +292,32 @@ function renderDailyFoods(entries) {
               </div>
 
               <div>
-                P ${item.proteinG.toFixed(1)} g
+                P ${item.proteinG.toFixed(1)}
               </div>
 
               <div>
-                C ${item.carbsG.toFixed(1)} g
+                C ${item.carbsG.toFixed(1)}
               </div>
 
               <div>
-                G ${item.fatG.toFixed(1)} g
+                G ${item.fatG.toFixed(1)}
+              </div>
+
+              <div class="daily-food-actions">
+                <button
+                  type="button"
+                  data-action="edit"
+                  data-entry-id="${item.id}">
+                  Editar
+                </button>
+
+                <button
+                  type="button"
+                  class="delete"
+                  data-action="delete"
+                  data-entry-id="${item.id}">
+                  Excluir
+                </button>
               </div>
 
             </div>
@@ -247,6 +340,28 @@ function renderDailyFoods(entries) {
       </div>
     `
   );
+
+  content.querySelectorAll("[data-action]")
+    .forEach(button => {
+
+      button.addEventListener("click", async () => {
+        const entryId = button.dataset.entryId;
+
+        const entry = entries.find(
+          item => item.id === entryId
+        );
+
+        if (!entry) return;
+
+        if (button.dataset.action === "edit") {
+          await handleEdit(entry);
+        }
+
+        if (button.dataset.action === "delete") {
+          await handleDelete(entry);
+        }
+      });
+    });
 
   status.textContent =
     "Diário alimentar sincronizado com a nuvem.";
